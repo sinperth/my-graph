@@ -236,13 +236,119 @@ st.dataframe(
     use_container_width=True
 )
 
+
 # ========================================
-# 그래프 도감 3 (추가 예정)
+# 그래프 도감 3
+# 날짜별 박스오피스 10위권 일관객 합계
 # ========================================
 st.divider()
 
-st.header("📊 그래프 3. 추가 예정")
+st.header("📊 그래프 3. 날짜별 박스오피스 10위권 일관객 합계")
 
 st.write(
-    "새로운 데이터 분석 그래프를 이 구역에 추가할 예정입니다."
+    "날짜별로 그날 박스오피스 10위권 영화들의 일관객을 모두 더해 "
+    "전체 관객 규모의 변화를 살펴봅니다."
+)
+
+# 날짜별 일관객 합계 계산
+daily_total = (
+    df.groupby("날짜", as_index=False)["일관객"]
+    .sum()
+    .sort_values("날짜")
+)
+
+# 가장 관객 합계가 컸던 날 3일
+top3_days = (
+    daily_total
+    .nlargest(3, "일관객")
+    .sort_values("일관객", ascending=False)
+)
+
+# 영역 그래프 만들기
+fig3 = px.area(
+    daily_total,
+    x="날짜",
+    y="일관객",
+    title="날짜별 박스오피스 10위권 일관객 합계",
+    labels={
+        "날짜": "날짜",
+        "일관객": "10위권 일관객 합계 (명)"
+    },
+    markers=True
+)
+
+# 마우스를 올렸을 때 표시되는 정보
+fig3.update_traces(
+    hovertemplate=
+    "날짜: %{x|%Y-%m-%d}<br>"
+    "10위권 일관객 합계: %{y:,}명"
+    "<extra></extra>"
+)
+
+# 가장 관객 합계가 큰 날 3일을 그래프 위에 표시
+annotations = []
+
+for _, row in top3_days.iterrows():
+    annotations.append(
+        dict(
+            x=row["날짜"],
+            y=row["일관객"],
+            text=(
+                f"{row['날짜'].strftime('%m월 %d일')}<br>"
+                f"{row['일관객']:,.0f}명"
+            ),
+            showarrow=True,
+            arrowhead=2,
+            ax=0,
+            ay=-60,
+            bgcolor="white",
+            bordercolor="black",
+            borderwidth=1,
+            font=dict(size=12, color="black")
+        )
+    )
+
+# 그래프 디자인
+fig3.update_layout(
+    height=600,
+    hovermode="x unified",
+    annotations=annotations
+)
+
+fig3.update_yaxes(
+    tickformat=",d",
+    rangemode="tozero"
+)
+
+# 그래프 출력
+st.plotly_chart(
+    fig3,
+    use_container_width=True
+)
+
+# 그래프 해석 문구 자리
+st.subheader("💡 이 그래프로 알 수 있는 것")
+
+st.info(
+    "날짜별 박스오피스 10위권 일관객 합계를 비교하여 "
+    "전체 영화관 관객 규모가 증가하거나 감소하는 시기와 "
+    "관객이 가장 많았던 날을 알 수 있습니다."
+)
+
+# 관객 합계가 가장 컸던 날 3일 표
+st.subheader("🏆 일관객 합계가 가장 컸던 날 TOP 3")
+
+top3_display = top3_days.copy()
+
+top3_display["날짜"] = top3_display["날짜"].dt.strftime("%Y-%m-%d")
+
+top3_display["일관객"] = top3_display["일관객"].map(
+    lambda x: f"{x:,.0f}명"
+)
+
+top3_display.index = range(1, len(top3_display) + 1)
+
+st.dataframe(
+    top3_display,
+    use_container_width=True
 )
