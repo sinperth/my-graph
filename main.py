@@ -474,3 +474,114 @@ st.dataframe(
     top10_display,
     use_container_width=True
 )
+
+
+# ========================================
+# 그래프 도감 5
+# 월 × 요일별 일관객 합계 히트맵
+# ========================================
+st.divider()
+
+st.header("📊 그래프 5. 월 × 요일별 일관객 합계 히트맵")
+
+st.write(
+    "날짜에서 월과 요일을 뽑아, "
+    "월별·요일별 일관객 합계를 색으로 비교합니다."
+)
+
+# 데이터 복사
+heatmap_df = df.copy()
+
+# 월 추출
+heatmap_df["월"] = heatmap_df["날짜"].dt.month
+
+# 요일 추출
+# dayofweek: 월요일=0, 일요일=6
+weekday_names = [
+    "월요일",
+    "화요일",
+    "수요일",
+    "목요일",
+    "금요일",
+    "토요일",
+    "일요일"
+]
+
+heatmap_df["요일"] = heatmap_df["날짜"].dt.dayofweek
+
+heatmap_df["요일명"] = heatmap_df["요일"].map(
+    dict(enumerate(weekday_names))
+)
+
+# 월 × 요일별 일관객 합계
+heatmap_data = (
+    heatmap_df
+    .groupby(["월", "요일", "요일명"], as_index=False)["일관객"]
+    .sum()
+)
+
+# 요일 순서를 월요일 → 일요일로 고정
+heatmap_data["요일명"] = pd.Categorical(
+    heatmap_data["요일명"],
+    categories=weekday_names,
+    ordered=True
+)
+
+# 피벗 테이블
+heatmap_pivot = heatmap_data.pivot(
+    index="월",
+    columns="요일명",
+    values="일관객"
+)
+
+# 월 순서 정렬
+heatmap_pivot = heatmap_pivot.sort_index()
+
+# 월 이름 표시
+heatmap_pivot.index = [
+    f"{month}월"
+    for month in heatmap_pivot.index
+]
+
+# 히트맵 만들기
+fig5 = px.imshow(
+    heatmap_pivot,
+    labels=dict(
+        x="요일",
+        y="월",
+        color="일관객 합계 (명)"
+    ),
+    x=weekday_names,
+    y=heatmap_pivot.index,
+    color_continuous_scale="YlOrRd",
+    aspect="auto",
+    title="월 × 요일별 일관객 합계"
+)
+
+# 마우스를 올렸을 때 표시되는 정보
+fig5.update_traces(
+    hovertemplate=
+    "월: %{y}<br>"
+    "요일: %{x}<br>"
+    "일관객 합계: %{z:,}명"
+    "<extra></extra>"
+)
+
+# 그래프 디자인
+fig5.update_layout(
+    height=600
+)
+
+# 그래프 출력
+st.plotly_chart(
+    fig5,
+    use_container_width=True
+)
+
+# 그래프 해석 문구 자리
+st.subheader("💡 이 그래프로 알 수 있는 것")
+
+st.info(
+    "월과 요일에 따른 일관객 합계를 색의 진하기로 비교하여 "
+    "어느 월과 요일에 박스오피스 10위권 관객이 많았는지 알 수 있습니다."
+)
